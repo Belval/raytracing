@@ -1,4 +1,5 @@
 #include <iostream>
+#include <string>
 
 #include "camera.h"
 #include "entitylist.h"
@@ -66,10 +67,13 @@ Entity *random_scene() {
     return new Entity_list(list, i);
 }
 
-int main() {
-    int nx = 320;
-    int ny = 180;
-    int ns = 100;
+int main(int argc, char* argv[]) {
+    if (argc < 5) {
+        std::cerr << "Usage: " << argv[0] << " [WIDTH] [HEIGHT] [BOUNCES] [OUTPUT FILENAME]" << std::endl;
+    }
+    int nx = std::stoi(std::string(argv[1]));
+    int ny = std::stoi(std::string(argv[2]));
+    int ns = std::stoi(std::string(argv[3]));
     Vec3 lower_left_corner(-2.0, -1.0, -1.0);
     Vec3 horizontal(4.0, 0.0, 0.0);
     Vec3 vertical(0.0, 2.0, 0.0);
@@ -108,5 +112,5 @@ int main() {
             image[(ny - j - 1) * nx * 3 + i * 3 + 2] = out[2];
         }
     }
-    stbi_write_png("out.png", nx, ny, 3, image, nx * 3);
+    stbi_write_png(argv[4], nx, ny, 3, image, nx * 3);
 }
