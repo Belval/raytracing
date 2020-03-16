@@ -7,6 +7,8 @@
 #include "lambertian.h"
 #include "metal.h"
 #include "transparent.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
 
 Vec3 color(const Ray& r, Entity *world, int depth) {
     HitRecord rec;
@@ -65,8 +67,8 @@ Entity *random_scene() {
 }
 
 int main() {
-    int nx = 640;
-    int ny = 360;
+    int nx = 320;
+    int ny = 180;
     int ns = 100;
     std::cout << "P3\n" << nx << " " << ny << "\n255\n";
     Vec3 lower_left_corner(-2.0, -1.0, -1.0);
@@ -86,7 +88,7 @@ int main() {
     float dist_to_focus = (lookfrom - lookat).l2();
     float aperture = 0.001;
     Camera cam(lookfrom, lookat, Vec3(0, 1, 0), 20, float(nx) / float(ny), aperture, dist_to_focus);
-    unsigned char image[nx * ny * 3];
+    uint8_t* image = new uint8_t[nx * ny * 3];
     #pragma omp parallel for collapse(2)
     for (int j = ny - 1; j >= 0; j--) {
         for (int i = 0; i < nx; i++) {
@@ -107,12 +109,5 @@ int main() {
             image[(ny - j - 1) * nx * 3 + i * 3 + 2] = out[2];
         }
     }
-
-    for (int j = ny - 1; j >= 0; j--) {
-        for (int i = 0; i < nx; i++) {
-            std::cout << int(image[(ny - j - 1) * nx * 3 + i * 3]) << " ";
-            std::cout << int(image[(ny - j - 1) * nx * 3 + i * 3 + 1]) << " ";
-            std::cout << int(image[(ny - j - 1) * nx * 3 + i * 3 + 2]) << std::endl;
-        }
-    }
+    stbi_write_png("out.png", nx, ny, 3, image, nx * 3);
 }
