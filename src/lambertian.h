@@ -5,17 +5,17 @@
 #include "vec3.h"
 #include "entity.h"
 
-class lambertian : public material {
+class Lambertian : public Material {
 public:
-    lambertian(const vec3& a) : albedo(a) {}
-    virtual bool scatter(const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered) const {
-        vec3 target = rec.p + rec.normal + random_in_unit_sphere();
-        scattered = ray(rec.p, target - rec.p);
+    Lambertian(const Vec3& a) : albedo(a) {}
+    virtual bool scatter(const Ray& r_in, const HitRecord& rec, Vec3& attenuation, Ray& scattered) const {
+        Vec3 target = rec.p + rec.normal + random_in_unit_Sphere();
+        scattered = Ray(rec.p, target - rec.p);
         attenuation = albedo;
         return true;
     }
 
-    vec3 albedo;
+    Vec3 albedo;
 };
 
-#endif LAMBERTIANH__
+#endif

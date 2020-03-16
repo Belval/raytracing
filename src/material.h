@@ -3,9 +3,9 @@
 
 #include "entity.h"
 
-class material {
+class Material {
 public:
-    virtual bool scatter(const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered) const = 0;
+    virtual bool scatter(const Ray& r_in, const HitRecord& rec, Vec3& attenuation, Ray& scattered) const = 0;
 };
 
-#endif MATERIALH__
+#endif

@@ -1,5 +1,5 @@
 SRC = ./src/main.cpp
-NAME = raytracer
+NAME = Raytracer
 
 CC = g++
 
@@ -8,7 +8,7 @@ RM = rm -f
 OBJ = $(SRC:.cpp=.o)
 
 CFLAGS = -O2 -W -Wall -Wextra -Werror
-CFLAGS += -I./src/vec3.h
+CFLAGS += -I./src/Vec3.h
 
 all : $(NAME)
 

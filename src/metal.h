@@ -4,18 +4,18 @@
 #include "material.h"
 #include "ray.h"
 
-class metal : public material {
+class Metal : public Material {
 public:
-    metal(const vec3& a, float f) : albedo(a) { if (f < 1) fuzz = f; else fuzz = 1; }
-    virtual bool scatter(const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered) const {
-        vec3 reflected = reflect(unitv(r_in.direction()), rec.normal);
-        scattered = ray(rec.p, reflected + fuzz * random_in_unit_sphere());
+    Metal(const Vec3& a, float f) : albedo(a) { if (f < 1) fuzz = f; else fuzz = 1; }
+    virtual bool scatter(const Ray& r_in, const HitRecord& rec, Vec3& attenuation, Ray& scattered) const {
+        Vec3 reflected = reflect(unitv(r_in.direction()), rec.normal);
+        scattered = Ray(rec.p, reflected + fuzz * random_in_unit_Sphere());
         attenuation = albedo;
         return (dot(scattered.direction(), rec.normal) > 0);
     }
 
-    vec3 albedo;
+    Vec3 albedo;
     float fuzz;
 };
 
-#endif METALH__
+#endif
