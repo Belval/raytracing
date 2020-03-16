@@ -70,7 +70,6 @@ int main() {
     int nx = 320;
     int ny = 180;
     int ns = 100;
-    std::cout << "P3\n" << nx << " " << ny << "\n255\n";
     Vec3 lower_left_corner(-2.0, -1.0, -1.0);
     Vec3 horizontal(4.0, 0.0, 0.0);
     Vec3 vertical(0.0, 2.0, 0.0);
