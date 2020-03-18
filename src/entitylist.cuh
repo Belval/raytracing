@@ -1,18 +1,18 @@
 #ifndef ENTITYLISTH__
 #define ENTITYLISTH__
 
-#include "entity.h"
+#include "entity.cuh"
 
-class Entity_list: public Entity {
+class EntityList: public Entity {
 public:
-    Entity_list() {}
-    Entity_list(Entity **e, int n) { list = e; list_size = n; } 
-    virtual bool hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const;
+    __device__ EntityList() {}
+    __device__ EntityList(Entity **e, int n) { list = e; list_size = n; } 
+    __device__ virtual bool hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const;
     Entity **list;
     int list_size;
 };
 
-bool Entity_list::hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const {
+__device__ bool EntityList::hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const {
     HitRecord temp_rec;
     bool hit_anything = false;
     double closest_so_far = tmax;

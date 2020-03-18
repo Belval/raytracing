@@ -1,19 +1,19 @@
 #ifndef CAMERAH__
 #define CAMERAH__
 
-#include "ray.h"
+#include "ray.cuh"
 
-Vec3 random_in_unit_disk() {
+__device__ Vec3 random_in_unit_disk(curandState *local_rand_state) {
     Vec3 p;
     do {
-        p = 2.0*Vec3(drand48(), drand48(), 0) - Vec3(1, 1, 0);
-    } while (dot(p, p) >= 1.0);
+        p = 2.0f * Vec3(curand_uniform(local_rand_state), curand_uniform(local_rand_state), 0) - Vec3(1, 1, 0);
+    } while (dot(p, p) >= 1.0f);
     return p;
 }
 
 class Camera {
 public:
-    Camera(Vec3 lookfrom, Vec3 lookat, Vec3 vup, float vfov, float aspect,
+    __device__ Camera(Vec3 lookfrom, Vec3 lookat, Vec3 vup, float vfov, float aspect,
                float aperture, float focus_dist) {
         lens_radius = aperture / 2;
         float theta = vfov * M_PI / 180;
@@ -30,8 +30,8 @@ public:
         horizontal = 2*half_width*focus_dist*u;
         vertical = 2*half_height*focus_dist*v;
     }
-    Ray get_Ray(float s, float t) {
-        Vec3 rd = lens_radius * random_in_unit_disk();
+    __device__ Ray get_ray(float s, float t, curandState *local_rand_state) {
+        Vec3 rd = lens_radius * random_in_unit_disk(local_rand_state);
         Vec3 offset = u * rd.x() + v * rd.y();
         return Ray(origin + offset,
                     lower_left_corner + s*horizontal + t*vertical

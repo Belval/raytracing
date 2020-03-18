@@ -1,7 +1,7 @@
 #ifndef ENTITYH__
 #define ENTITYH__
 
-#include "ray.h"
+#include "ray.cuh"
 
 class Material;
 
@@ -14,7 +14,7 @@ struct HitRecord {
 
 class Entity {
 public:
-    virtual bool hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const = 0;
+    __device__ virtual bool hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const = 0;
 };
 
 #endif

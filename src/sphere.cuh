@@ -1,20 +1,20 @@
 #ifndef SPHEREH__
 #define SPHEREH__
 
-#include "entity.h"
-#include "material.h"
+#include "entity.cuh"
+#include "material.cuh"
 
 class Sphere: public Entity {
 public:
     //Sphere() {}
-    Sphere(Vec3 cen, float r, Material* m): center(cen), radius(r), mat(m) {};
-    virtual bool hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const;
+    __device__ Sphere(Vec3 cen, float r, Material* m): center(cen), radius(r), mat_ptr(m) {};
+    __device__ virtual bool hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const;
     Vec3 center;
     float radius;
-    Material* mat;
+    Material* mat_ptr;
 };
 
-bool Sphere::hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const {
+__device__ bool Sphere::hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const {
     Vec3 oc = r.origin() - center;
     float a = dot(r.direction(), r.direction());
     float b = dot(oc, r.direction());
@@ -26,7 +26,7 @@ bool Sphere::hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const {
             rec.t = temp;
             rec.p = r.point(rec.t);
             rec.normal = (rec.p - center) / radius;
-            rec.mat_ptr = mat;
+            rec.mat_ptr = mat_ptr;
             return true;
         }
         temp = (-b + sqrt(b*b - a*c)) / a;
@@ -34,7 +34,7 @@ bool Sphere::hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const {
             rec.t = temp;
             rec.p = r.point(rec.t);
             rec.normal = (rec.p - center) / radius;
-            rec.mat_ptr = mat;
+            rec.mat_ptr = mat_ptr;
             return true;
         }
     }

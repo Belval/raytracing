@@ -1,13 +1,19 @@
 #ifndef TRANSPARENTH__
 #define TRANSPARENTH__
 
-#include "material.h"
+#include "material.cuh"
+
+__device__ float schlick(float cosine, float ref_idx) {
+    float r0 = (1 - ref_idx) / (1 + ref_idx);
+    r0 = r0 * r0;
+    return r0 + (1 - r0) * pow((1 - cosine), 5);
+}
 
 class Transparent : public Material {
 public:
-    Transparent(float ri) : ref_idx(ri) {}
-    virtual bool scatter(const Ray& r_in, const HitRecord& rec,
-                            Vec3& attenuation, Ray& scattered) const {
+    __device__ Transparent(float ri) : ref_idx(ri) {}
+    __device__ virtual bool scatter(const Ray& r_in, const HitRecord& rec,
+                            Vec3& attenuation, Ray& scattered, curandState *local_rand_state) const {
         Vec3 outward_normal;
         Vec3 reflected = reflect(r_in.direction(), rec.normal);
         float ni_over_nt;
@@ -35,7 +41,7 @@ public:
             reflect_prob = 1.0;
         }
 
-        if (drand48() < reflect_prob) {
+        if (curand_uniform(local_rand_state) < reflect_prob) {
             scattered = Ray(rec.p, reflected);
         }
         else {
@@ -43,11 +49,6 @@ public:
         }
 
         return true;
-    }
-    static float schlick(float cosine, float ref_idx) {
-        float r0 = (1 - ref_idx) / (1 + ref_idx);
-        r0 = r0 * r0;
-        return r0 + (1 - r0) * pow((1 - cosine), 5);
     }
 private:
     float ref_idx;
