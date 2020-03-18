@@ -83,7 +83,7 @@ __global__ void create_world(Entity **elist, Entity **eworld, Camera **camera, i
         Vec3 lookfrom(13,2,3);
         Vec3 lookat(0,0,0);
         float dist_to_focus = 10.0; (lookfrom-lookat).l2();
-        float aperture = 0.1;
+        float aperture = 0.001;
         *camera = new Camera(lookfrom, lookat, Vec3(0,1,0), 30.0, float(nx) / float(ny), aperture, dist_to_focus);
     }
 }
@@ -180,7 +180,7 @@ int main(int argc, char* argv[]) {
     render<<<blocks, threads>>>(image, nx, ny,  ns, camera, eworld, d_rand_state);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
-    
+
     uint8_t* imageHost = new uint8_t[nx * ny * 3 * sizeof(uint8_t)];
     for (int j = ny - 1; j >= 0; j--) {
         for (int i = 0; i < nx; i++) {
