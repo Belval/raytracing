@@ -12,7 +12,7 @@ public:
     __device__ virtual bool scatter(const Ray& r_in, const HitRecord& rec, Vec3& attenuation, Ray& scattered, curandState *local_rand_state) const {
         Vec3 target = rec.p + rec.normal + random_in_unit_sphere(local_rand_state);
         scattered = Ray(rec.p, target - rec.p, r_in.time());
-        attenuation = albedo->value(0, 0, rec.p);
+        attenuation = albedo->value(rec.u, rec.v, rec.p);
         return true;
     }
 

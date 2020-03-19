@@ -11,7 +11,10 @@
 #include "lambertian.cuh"
 #include "metal.cuh"
 #include "transparent.cuh"
+#include "texture.cuh"
+#define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image.h"
 #include "stb_image_write.h"
 
 #define checkCudaErrors(val) check_cuda( (val), #val, __FILE__, __LINE__ )
@@ -53,28 +56,21 @@ __device__ Vec3 color(const Ray& r, Entity **world, curandState *local_rand_stat
 
 #define RND (curand_uniform(&local_rand_state))
 
-__global__ void create_world(Entity **elist, Entity **eworld, Camera **camera, int nx, int ny, curandState *rand_state) {
+__global__ void create_world(Entity **elist, Entity **eworld, Camera **camera, int nx, int ny, ImageTexture** texture, curandState *rand_state) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
         curandState local_rand_state = *rand_state;
+        int i = 0;
         Texture *checker = new CheckerTexture(
             new ConstantTexture(Vec3(0.2, 0.3, 0.1)),
             new ConstantTexture(Vec3(0.9, 0.9, 0.9))
         );
-        elist[0] = new Sphere(Vec3(0,-1000.0,-1), 1000, new Lambertian(checker));
-        int i = 1;
+        //elist[i++] = new Sphere(Vec3(0,-1000.0,-1), 1000, new Lambertian(checker));
         for(int a = -11; a < 11; a++) {
             for(int b = -11; b < 11; b++) {
                 float choose_mat = RND;
                 Vec3 center(a+RND,0.2,b+RND);
                 if(choose_mat < 0.8f) {
-                    elist[i++] = new MovingSphere(
-                        center,
-                        center + Vec3(0, 0.5 * RND, 0),
-                        0.0, 
-                        1.0,
-                        0.2,
-                        new Lambertian(new ConstantTexture(Vec3(RND*RND, RND*RND, RND*RND)))
-                    );
+                    elist[i++] = new Sphere(center, 0.2, new Lambertian(new ConstantTexture(Vec3(RND*RND, RND*RND, RND*RND))));
                 }
                 else if(choose_mat < 0.95f) {
                     elist[i++] = new Sphere(center, 0.2,
@@ -86,10 +82,10 @@ __global__ void create_world(Entity **elist, Entity **eworld, Camera **camera, i
             }
         }
         elist[i++] = new Sphere(Vec3(0, 1, 0),  1.0, new Transparent(1.5));
-        elist[i++] = new Sphere(Vec3(-4, 1, 0), 1.0, new Lambertian(new NoiseTexture(100, rand_state)));
+        elist[i++] = new Sphere(Vec3(-4, 1, 0), 1.0, new Lambertian(*texture));
         elist[i++] = new Sphere(Vec3(4, 1, 0),  1.0, new Metal(Vec3(0.7, 0.6, 0.5), 0.0));
         *rand_state = local_rand_state;
-        *eworld = new EntityList(elist, 22*22+1+3);
+        *eworld = new EntityList(elist, i);//22*22+1+3);
 
         Vec3 lookfrom(13,2,3);
         Vec3 lookat(0,0,0);
@@ -132,6 +128,12 @@ __global__ void render_init(int maxx, int maxy, curandState *rand_state) {
     curand_init(1984, pixel_index, 0, &rand_state[pixel_index]);
 }
 
+__global__ void texture_init(unsigned char* tex_data, int nx, int ny, ImageTexture** tex) {
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
+        *tex = new ImageTexture(tex_data, nx, ny);
+    }
+}
+
 __global__ void render(Vec3* fb, int max_x, int max_y, int ns, Camera **cam, Entity **world, curandState *randState) {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int j = threadIdx.y + blockIdx.y * blockDim.y;
@@ -166,6 +168,17 @@ int main(int argc, char* argv[]) {
     // Values
     int num_pixels = nx * ny;
 
+    int tex_x, tex_y, tex_n;
+    unsigned char *tex_data_host = stbi_load("assets/earthmap.jpg", &tex_x, &tex_y, &tex_n, 0);
+
+    unsigned char *tex_data;
+    checkCudaErrors(cudaMallocManaged(&tex_data, tex_x * tex_y * tex_n * sizeof(unsigned char)));
+    checkCudaErrors(cudaMemcpy(tex_data, tex_data_host, tex_x * tex_y * tex_n * sizeof(unsigned char), cudaMemcpyHostToDevice));
+
+    ImageTexture **texture;
+    checkCudaErrors(cudaMalloc((void **)&texture, sizeof(ImageTexture*)));
+    texture_init<<<1, 1>>>(tex_data, tex_x, tex_y, texture);
+
     // Allocating CUDA memory
     Vec3* image;
     checkCudaErrors(cudaMallocManaged((void**)&image, nx * ny * sizeof(Vec3)));
@@ -189,7 +202,7 @@ int main(int argc, char* argv[]) {
     checkCudaErrors(cudaMalloc((void **)&eworld, sizeof(Entity*)));
     Camera **camera;
     checkCudaErrors(cudaMalloc((void **)&camera, sizeof(Camera*)));
-    create_world<<<1, 1>>>(elist, eworld, camera, nx, ny, d_rand_state2);
+    create_world<<<1, 1>>>(elist, eworld, camera, nx, ny, texture, d_rand_state2);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 
