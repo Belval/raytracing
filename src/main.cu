@@ -2,10 +2,12 @@
 #include <string>
 #include <curand_kernel.h>
 
+#include "bvh_node.cuh"
 #include "camera.cuh"
 #include "entitylist.cuh"
 #include "float.h"
 #include "sphere.cuh"
+#include "moving_sphere.cuh"
 #include "lambertian.cuh"
 #include "metal.cuh"
 #include "transparent.cuh"
@@ -46,7 +48,7 @@ __device__ Vec3 color(const Ray& r, Entity **world, curandState *local_rand_stat
             return cur_attenuation * c;
         }
     }
-    return Vec3(0.0,0.0,0.0); // exceeded recursion
+    return Vec3(0.0, 0.0, 0.0); // exceeded recursion
 }
 
 #define RND (curand_uniform(&local_rand_state))
@@ -54,16 +56,25 @@ __device__ Vec3 color(const Ray& r, Entity **world, curandState *local_rand_stat
 __global__ void create_world(Entity **elist, Entity **eworld, Camera **camera, int nx, int ny, curandState *rand_state) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
         curandState local_rand_state = *rand_state;
-        elist[0] = new Sphere(Vec3(0,-1000.0,-1), 1000,
-                               new Lambertian(Vec3(0.5, 0.5, 0.5)));
+        Texture *checker = new CheckerTexture(
+            new ConstantTexture(Vec3(0.2, 0.3, 0.1)),
+            new ConstantTexture(Vec3(0.9, 0.9, 0.9))
+        );
+        elist[0] = new Sphere(Vec3(0,-1000.0,-1), 1000, new Lambertian(checker));
         int i = 1;
         for(int a = -11; a < 11; a++) {
             for(int b = -11; b < 11; b++) {
                 float choose_mat = RND;
                 Vec3 center(a+RND,0.2,b+RND);
                 if(choose_mat < 0.8f) {
-                    elist[i++] = new Sphere(center, 0.2,
-                                             new Lambertian(Vec3(RND*RND, RND*RND, RND*RND)));
+                    elist[i++] = new MovingSphere(
+                        center,
+                        center + Vec3(0, 0.5 * RND, 0),
+                        0.0, 
+                        1.0,
+                        0.2,
+                        new Lambertian(new ConstantTexture(Vec3(RND*RND, RND*RND, RND*RND)))
+                    );
                 }
                 else if(choose_mat < 0.95f) {
                     elist[i++] = new Sphere(center, 0.2,
@@ -74,8 +85,8 @@ __global__ void create_world(Entity **elist, Entity **eworld, Camera **camera, i
                 }
             }
         }
-        elist[i++] = new Sphere(Vec3(0, 1,0),  1.0, new Transparent(1.5));
-        elist[i++] = new Sphere(Vec3(-4, 1, 0), 1.0, new Lambertian(Vec3(0.4, 0.2, 0.1)));
+        elist[i++] = new Sphere(Vec3(0, 1, 0),  1.0, new Transparent(1.5));
+        elist[i++] = new Sphere(Vec3(-4, 1, 0), 1.0, new Lambertian(new NoiseTexture(100, rand_state)));
         elist[i++] = new Sphere(Vec3(4, 1, 0),  1.0, new Metal(Vec3(0.7, 0.6, 0.5), 0.0));
         *rand_state = local_rand_state;
         *eworld = new EntityList(elist, 22*22+1+3);
@@ -84,7 +95,17 @@ __global__ void create_world(Entity **elist, Entity **eworld, Camera **camera, i
         Vec3 lookat(0,0,0);
         float dist_to_focus = 10.0; (lookfrom-lookat).l2();
         float aperture = 0.001;
-        *camera = new Camera(lookfrom, lookat, Vec3(0,1,0), 30.0, float(nx) / float(ny), aperture, dist_to_focus);
+        *camera = new Camera(
+            lookfrom,
+            lookat,
+            Vec3(0,1,0),
+            30.0,
+            float(nx) / float(ny),
+            aperture,
+            dist_to_focus,
+            0.0,
+            1.0
+        );
     }
 }
 

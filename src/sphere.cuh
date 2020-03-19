@@ -9,6 +9,7 @@ public:
     //Sphere() {}
     __device__ Sphere(Vec3 cen, float r, Material* m): center(cen), radius(r), mat_ptr(m) {};
     __device__ virtual bool hit(const Ray& r, float tmin, float tmax, HitRecord& rec) const;
+    __device__ virtual bool bounding_box(float t0, float t1, AABB& box) const;
     Vec3 center;
     float radius;
     Material* mat_ptr;
@@ -39,6 +40,12 @@ __device__ bool Sphere::hit(const Ray& r, float tmin, float tmax, HitRecord& rec
         }
     }
     return false;
+}
+
+__device__ bool Sphere::bounding_box(float t0, float t1, AABB& box) const {
+    box = AABB(center - Vec3(radius, radius, radius),
+               center + Vec3(radius, radius, radius));
+    return true;
 }
 
 #endif
