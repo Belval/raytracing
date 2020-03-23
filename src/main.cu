@@ -7,6 +7,8 @@
 #include "entitylist.cuh"
 #include "float.h"
 #include "sphere.cuh"
+#include "xy_rect.cuh"
+#include "diffuse_light.cuh"
 #include "moving_sphere.cuh"
 #include "lambertian.cuh"
 #include "metal.cuh"
@@ -28,30 +30,30 @@ void check_cuda(cudaError_t result, char const *const func, const char *const fi
     }
 }
 
-__device__ Vec3 color(const Ray& r, Entity **world, curandState *local_rand_state) {
+__device__ Vec3 color(const Ray& r, const Vec3& background, Entity **world, curandState *local_rand_state) {
     Ray cur_ray = r;
-    Vec3 cur_attenuation = Vec3(1.0,1.0,1.0);
+    Vec3 cur_attenuation = Vec3(1.0, 1.0, 1.0);
+    Vec3 cur_emitted = Vec3(0.0, 0.0, 0.0);
     for(int i = 0; i < 50; i++) {
         HitRecord rec;
         if ((*world)->hit(cur_ray, 0.001f, FLT_MAX, rec)) {
             Ray scattered;
             Vec3 attenuation;
+            Vec3 emitted = rec.mat_ptr->emitted(rec.u, rec.v, rec.p);
             if(rec.mat_ptr->scatter(cur_ray, rec, attenuation, scattered, local_rand_state)) {
                 cur_attenuation *= attenuation;
+                cur_emitted += emitted * cur_attenuation;
                 cur_ray = scattered;
             }
             else {
-                return Vec3(0.0,0.0,0.0);
+                return cur_emitted += emitted * cur_attenuation;
             }
         }
         else {
-            Vec3 unit_direction = unitv(cur_ray.direction());
-            float t = 0.5f*(unit_direction.y() + 1.0f);
-            Vec3 c = (1.0f-t)*Vec3(1.0, 1.0, 1.0) + t*Vec3(0.5, 0.7, 1.0);
-            return cur_attenuation * c;
+            return cur_emitted;
         }
     }
-    return Vec3(0.0, 0.0, 0.0); // exceeded recursion
+    return cur_emitted; // exceeded recursion
 }
 
 #define RND (curand_uniform(&local_rand_state))
@@ -64,7 +66,12 @@ __global__ void create_world(Entity **elist, Entity **eworld, Camera **camera, i
             new ConstantTexture(Vec3(0.2, 0.3, 0.1)),
             new ConstantTexture(Vec3(0.9, 0.9, 0.9))
         );
-        //elist[i++] = new Sphere(Vec3(0,-1000.0,-1), 1000, new Lambertian(checker));
+        elist[i++] = new Sphere(Vec3(0,-1000.0,-1), 1000, new Lambertian(
+            new CheckerTexture(
+                new ConstantTexture(Vec3(1, 1, 1)),
+                new ConstantTexture(Vec3(0, 1, 0))
+            )
+        ));
         for(int a = -11; a < 11; a++) {
             for(int b = -11; b < 11; b++) {
                 float choose_mat = RND;
@@ -84,6 +91,7 @@ __global__ void create_world(Entity **elist, Entity **eworld, Camera **camera, i
         elist[i++] = new Sphere(Vec3(0, 1, 0),  1.0, new Transparent(1.5));
         elist[i++] = new Sphere(Vec3(-4, 1, 0), 1.0, new Lambertian(*texture));
         elist[i++] = new Sphere(Vec3(4, 1, 0),  1.0, new Metal(Vec3(0.7, 0.6, 0.5), 0.0));
+        elist[i++] = new XYRect(3, 5, 1, 3, -1, new DiffuseLight(new ConstantTexture(Vec3(1, 1, 1))));
         *rand_state = local_rand_state;
         *eworld = new EntityList(elist, i);//22*22+1+3);
 
@@ -141,11 +149,12 @@ __global__ void render(Vec3* fb, int max_x, int max_y, int ns, Camera **cam, Ent
     int pixel_index = j*max_x + i;
     curandState local_rand_state = randState[pixel_index];
     Vec3 col(0,0,0);
+    Vec3 background(0, 0, 0);
     for(int s=0; s < ns; s++) {
         float u = float(i + curand_uniform(&local_rand_state)) / float(max_x);
         float v = float(j + curand_uniform(&local_rand_state)) / float(max_y);
         Ray r = (*cam)->get_ray(u, v, &local_rand_state);
-        col += color(r, world, &local_rand_state);
+        col += color(r, background, world, &local_rand_state);
     }
     randState[pixel_index] = local_rand_state;
     col /= float(ns);

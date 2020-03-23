@@ -12,7 +12,7 @@ public:
     __device__ Vec3 direction() const { return B; }
     __device__ Vec3 point(float t) const { return A + t * B; }
     __device__ float time() const { return _time; }
-    
+
     Vec3 A, B;
     float _time;
 };
