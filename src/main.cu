@@ -7,7 +7,7 @@
 #include "entitylist.cuh"
 #include "float.h"
 #include "sphere.cuh"
-#include "xy_rect.cuh"
+#include "rect.cuh"
 #include "diffuse_light.cuh"
 #include "moving_sphere.cuh"
 #include "lambertian.cuh"
@@ -34,7 +34,7 @@ __device__ Vec3 color(const Ray& r, const Vec3& background, Entity **world, cura
     Ray cur_ray = r;
     Vec3 cur_attenuation = Vec3(1.0, 1.0, 1.0);
     Vec3 cur_emitted = Vec3(0.0, 0.0, 0.0);
-    for(int i = 0; i < 50; i++) {
+    for(int i = 0; i < 100; i++) {
         HitRecord rec;
         if ((*world)->hit(cur_ray, 0.001f, FLT_MAX, rec)) {
             Ray scattered;
@@ -104,6 +104,37 @@ __global__ void create_world(Entity **elist, Entity **eworld, Camera **camera, i
             lookat,
             Vec3(0,1,0),
             30.0,
+            float(nx) / float(ny),
+            aperture,
+            dist_to_focus,
+            0.0,
+            1.0
+        );
+    }
+}
+
+__global__ void create_cornell_box(Entity **elist, Entity **eworld, Camera **camera, int nx, int ny, ImageTexture** texture, curandState *rand_state) {
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
+        curandState local_rand_state = *rand_state;
+        int i = 0;
+        elist[i++] = new FlipFace(new YZRect(0, 555, 0, 555, 555, new Lambertian(new ConstantTexture(Vec3(0.12, 0.45, 0.15)))));
+        elist[i++] = new YZRect(0, 555, 0, 555, 0, new Lambertian(new ConstantTexture(Vec3(0.65, 0.05, 0.05))));
+        elist[i++] = new XZRect(213, 343, 227, 332, 554, new DiffuseLight(new ConstantTexture(Vec3(15, 15, 15))));
+        elist[i++] = new XZRect(0, 555, 0, 555, 0, new Lambertian(new ConstantTexture(Vec3(0.73, 0.73, 0.73))));
+        elist[i++] = new FlipFace(new XZRect(0, 555, 0, 555, 555, new Lambertian(new ConstantTexture(Vec3(0.73, 0.73, 0.73)))));
+        elist[i++] = new FlipFace(new XYRect(0, 555, 0, 555, 555, new Lambertian(new ConstantTexture(Vec3(0.73, 0.73, 0.73)))));
+        *rand_state = local_rand_state;
+        *eworld = new EntityList(elist, i);
+
+        Vec3 lookfrom(278, 278, -800);
+        Vec3 lookat(278, 278, 0);
+        float dist_to_focus = 10.0;
+        float aperture = 0.0;
+        *camera = new Camera(
+            lookfrom,
+            lookat,
+            Vec3(0,1,0),
+            40.0,
             float(nx) / float(ny),
             aperture,
             dist_to_focus,
@@ -211,7 +242,7 @@ int main(int argc, char* argv[]) {
     checkCudaErrors(cudaMalloc((void **)&eworld, sizeof(Entity*)));
     Camera **camera;
     checkCudaErrors(cudaMalloc((void **)&camera, sizeof(Camera*)));
-    create_world<<<1, 1>>>(elist, eworld, camera, nx, ny, texture, d_rand_state2);
+    create_cornell_box<<<1, 1>>>(elist, eworld, camera, nx, ny, texture, d_rand_state2);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 
