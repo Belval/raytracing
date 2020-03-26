@@ -14,6 +14,7 @@
 #include "metal.cuh"
 #include "transparent.cuh"
 #include "texture.cuh"
+#include "box.cuh"
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image.h"
@@ -123,6 +124,8 @@ __global__ void create_cornell_box(Entity **elist, Entity **eworld, Camera **cam
         elist[i++] = new XZRect(0, 555, 0, 555, 0, new Lambertian(new ConstantTexture(Vec3(0.73, 0.73, 0.73))));
         elist[i++] = new FlipFace(new XZRect(0, 555, 0, 555, 555, new Lambertian(new ConstantTexture(Vec3(0.73, 0.73, 0.73)))));
         elist[i++] = new FlipFace(new XYRect(0, 555, 0, 555, 555, new Lambertian(new ConstantTexture(Vec3(0.73, 0.73, 0.73)))));
+        elist[i++] = new Box(Vec3(130, 0, 65), Vec3(295, 165, 230), new Lambertian(new ConstantTexture(Vec3(0.73, 0.73, 0.73))));
+        elist[i++] = new Box(Vec3(265, 0, 295), Vec3(430, 330, 460), new Lambertian(new ConstantTexture(Vec3(0.73, 0.73, 0.73))));
         *rand_state = local_rand_state;
         *eworld = new EntityList(elist, i);
 
@@ -236,7 +239,7 @@ int main(int argc, char* argv[]) {
 
     // Building the world
     Entity **elist;
-    int num_entity = 22*22+1+3;
+    int num_entity = 22 * 22 + 1 + 3;
     checkCudaErrors(cudaMalloc((void **)&elist, num_entity * sizeof(Entity*)));
     Entity **eworld;
     checkCudaErrors(cudaMalloc((void **)&eworld, sizeof(Entity*)));
