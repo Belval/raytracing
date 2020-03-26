@@ -16,6 +16,8 @@
 #include "texture.cuh"
 #include "box.cuh"
 #include "transform.cuh"
+#include "isotropic.cuh"
+#include "constant_medium.cuh"
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image.h"
@@ -125,19 +127,29 @@ __global__ void create_cornell_box(Entity **elist, Entity **eworld, Camera **cam
         elist[i++] = new XZRect(0, 555, 0, 555, 0, new Lambertian(new ConstantTexture(Vec3(0.73, 0.73, 0.73))));
         elist[i++] = new FlipFace(new XZRect(0, 555, 0, 555, 555, new Lambertian(new ConstantTexture(Vec3(0.73, 0.73, 0.73)))));
         elist[i++] = new FlipFace(new XYRect(0, 555, 0, 555, 555, new Lambertian(new ConstantTexture(Vec3(0.73, 0.73, 0.73)))));
-        elist[i++] = new Translate(
-            new RotateY(
-                new Box(Vec3(0, 0, 0), Vec3(165, 330, 165), new Lambertian(new ConstantTexture(Vec3(0.73, 0.73, 0.73)))),
-                15
+        elist[i++] = new ConstantMedium(
+            new Translate(
+                new RotateY(
+                    new Box(Vec3(0, 0, 0), Vec3(165, 330, 165), new Lambertian(new ConstantTexture(Vec3(0.73, 0.73, 0.73)))),
+                    15
+                ),
+                Vec3(265, 0, 295)
             ),
-            Vec3(265, 0, 295)
+            0.05,
+            new ConstantTexture(Vec3(0, 0, 0)),
+            &local_rand_state
         );
-        elist[i++] = new Translate(
-            new RotateY(
-                new Box(Vec3(0, 0, 0), Vec3(165, 165, 165), new Lambertian(new ConstantTexture(Vec3(0.73, 0.73, 0.73)))),
-                -18
+        elist[i++] = new ConstantMedium(
+            new Translate(
+                new RotateY(
+                    new Box(Vec3(0, 0, 0), Vec3(165, 165, 165), new Lambertian(new ConstantTexture(Vec3(0.73, 0.73, 0.73)))),
+                    -18
+                ),
+                Vec3(130, 0, 65)
             ),
-            Vec3(130, 0, 65)
+            0.01,
+            new ConstantTexture(Vec3(1, 1, 1)),
+            &local_rand_state
         );
         *rand_state = local_rand_state;
         *eworld = new EntityList(elist, i);
