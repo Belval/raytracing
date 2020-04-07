@@ -50,7 +50,7 @@ __device__ Vec3 color(const Ray& r, const Vec3& background, Entity **world, cura
                 cur_ray = scattered;
             }
             else {
-                return cur_emitted += emitted * cur_attenuation;
+                return cur_emitted + emitted * cur_attenuation;
             }
         }
         else {
@@ -123,9 +123,12 @@ __global__ void create_cornell_box(Entity **elist, Entity **eworld, Camera **cam
         int i = 0;
         elist[i++] = new FlipFace(new YZRect(0, 555, 0, 555, 555, new Lambertian(new ConstantTexture(Vec3(0.12, 0.45, 0.15)))));
         elist[i++] = new YZRect(0, 555, 0, 555, 0, new Lambertian(new ConstantTexture(Vec3(0.65, 0.05, 0.05))));
-        elist[i++] = new XZRect(213, 343, 227, 332, 554, new DiffuseLight(new ConstantTexture(Vec3(15, 15, 15))));
+        elist[i++] = new XZRect(113, 443, 127, 432, 554, new DiffuseLight(new ConstantTexture(Vec3(1.0, 1.0, 1.0))));
         elist[i++] = new XZRect(0, 555, 0, 555, 0, new Lambertian(new ConstantTexture(Vec3(0.73, 0.73, 0.73))));
-        elist[i++] = new FlipFace(new XZRect(0, 555, 0, 555, 555, new Lambertian(new ConstantTexture(Vec3(0.73, 0.73, 0.73)))));
+        elist[i++] = new FlipFace(new XZRect(0, 555, 0, 555, 555, new Lambertian(new CheckerTexture(
+            new ConstantTexture(Vec3(1, 1, 1)),
+            new ConstantTexture(Vec3(0, 1, 0))
+        ))));
         elist[i++] = new FlipFace(new XYRect(0, 555, 0, 555, 555, new Lambertian(new ConstantTexture(Vec3(0.73, 0.73, 0.73)))));
         elist[i++] = new ConstantMedium(
             new Translate(
@@ -148,7 +151,7 @@ __global__ void create_cornell_box(Entity **elist, Entity **eworld, Camera **cam
                 Vec3(130, 0, 65)
             ),
             0.01,
-            new ConstantTexture(Vec3(1, 1, 1)),
+            new ConstantTexture(Vec3(0.8, 0.8, 0.8)),
             &local_rand_state
         );
         *rand_state = local_rand_state;
