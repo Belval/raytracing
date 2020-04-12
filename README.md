@@ -6,8 +6,6 @@ Partially inspired from this excellent article "Accelerated Ray Tracing in One W
 
 ## How to compile and run
 
-Since this uses CUDA you will need nvcc.
-
-`nvcc ./src/main.cu -I ./src -o test && time ./test 1920 1080 50 out.png && feh out.png`
+Since this uses CUDA you will need nvcc. Just use `make run`.
 
 ![result](out.png)
