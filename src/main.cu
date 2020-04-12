@@ -62,61 +62,6 @@ __device__ Vec3 color(const Ray& r, const Vec3& background, Entity **world, cura
 
 #define RND (curand_uniform(&local_rand_state))
 
-__global__ void create_world(Entity **elist, Entity **eworld, Camera **camera, int nx, int ny, ImageTexture** texture, curandState *rand_state) {
-    if (threadIdx.x == 0 && blockIdx.x == 0) {
-        curandState local_rand_state = *rand_state;
-        int i = 0;
-        Texture *checker = new CheckerTexture(
-            new ConstantTexture(Vec3(0.2, 0.3, 0.1)),
-            new ConstantTexture(Vec3(0.9, 0.9, 0.9))
-        );
-        elist[i++] = new Sphere(Vec3(0,-1000.0,-1), 1000, new Lambertian(
-            new CheckerTexture(
-                new ConstantTexture(Vec3(1, 1, 1)),
-                new ConstantTexture(Vec3(0, 1, 0))
-            )
-        ));
-        for(int a = -11; a < 11; a++) {
-            for(int b = -11; b < 11; b++) {
-                float choose_mat = RND;
-                Vec3 center(a+RND,0.2,b+RND);
-                if(choose_mat < 0.8f) {
-                    elist[i++] = new Sphere(center, 0.2, new Lambertian(new ConstantTexture(Vec3(RND*RND, RND*RND, RND*RND))));
-                }
-                else if(choose_mat < 0.95f) {
-                    elist[i++] = new Sphere(center, 0.2,
-                                             new Metal(Vec3(0.5f*(1.0f+RND), 0.5f*(1.0f+RND), 0.5f*(1.0f+RND)), 0.5f*RND));
-                }
-                else {
-                    elist[i++] = new Sphere(center, 0.2, new Transparent(1.5));
-                }
-            }
-        }
-        elist[i++] = new Sphere(Vec3(0, 1, 0),  1.0, new Transparent(1.5));
-        elist[i++] = new Sphere(Vec3(-4, 1, 0), 1.0, new Lambertian(*texture));
-        elist[i++] = new Sphere(Vec3(4, 1, 0),  1.0, new Metal(Vec3(0.7, 0.6, 0.5), 0.0));
-        elist[i++] = new XYRect(3, 5, 1, 3, -1, new DiffuseLight(new ConstantTexture(Vec3(1, 1, 1))));
-        *rand_state = local_rand_state;
-        *eworld = new EntityList(elist, i);//22*22+1+3);
-
-        Vec3 lookfrom(13,2,3);
-        Vec3 lookat(0,0,0);
-        float dist_to_focus = 10.0; (lookfrom-lookat).l2();
-        float aperture = 0.001;
-        *camera = new Camera(
-            lookfrom,
-            lookat,
-            Vec3(0,1,0),
-            30.0,
-            float(nx) / float(ny),
-            aperture,
-            dist_to_focus,
-            0.0,
-            1.0
-        );
-    }
-}
-
 __global__ void create_cornell_box(Entity **elist, Entity **eworld, Camera **camera, int nx, int ny, ImageTexture** texture, curandState *rand_state) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
         curandState local_rand_state = *rand_state;
@@ -125,6 +70,10 @@ __global__ void create_cornell_box(Entity **elist, Entity **eworld, Camera **cam
         elist[i++] = new YZRect(0, 555, 0, 555, 0, new Lambertian(new ConstantTexture(Vec3(0.65, 0.05, 0.05))));
         elist[i++] = new XZRect(113, 443, 127, 432, 554, new DiffuseLight(new ConstantTexture(Vec3(1.0, 1.0, 1.0))));
         elist[i++] = new XZRect(0, 555, 0, 555, 0, new Lambertian(new ConstantTexture(Vec3(0.73, 0.73, 0.73))));
+        elist[i++] = new FlipFace(new XZRect(0, 555, 0, 555, 555, new Lambertian(new CheckerTexture(
+            new ConstantTexture(Vec3(1, 1, 1)),
+            new ConstantTexture(Vec3(0, 1, 0))
+        ))));
         elist[i++] = new FlipFace(new XZRect(0, 555, 0, 555, 555, new Lambertian(new CheckerTexture(
             new ConstantTexture(Vec3(1, 1, 1)),
             new ConstantTexture(Vec3(0, 1, 0))
@@ -154,7 +103,6 @@ __global__ void create_cornell_box(Entity **elist, Entity **eworld, Camera **cam
             new ConstantTexture(Vec3(0.8, 0.8, 0.8)),
             &local_rand_state
         );
-        *rand_state = local_rand_state;
         *eworld = new EntityList(elist, i);
 
         Vec3 lookfrom(278, 278, -800);
@@ -173,15 +121,6 @@ __global__ void create_cornell_box(Entity **elist, Entity **eworld, Camera **cam
             1.0
         );
     }
-}
-
-__global__ void free_world(Entity **elist, Entity **eworld, Camera **camera) {
-    for(int i = 0; i < 22 * 22 + 1 + 3; i++) {
-        delete ((Sphere*)elist[i])->mat_ptr;
-        delete elist[i];
-    }
-    delete *eworld;
-    delete *camera;
 }
 
 __global__ void rand_init(curandState *rand_state) {
@@ -299,7 +238,6 @@ int main(int argc, char* argv[]) {
 
     // Clean up
     checkCudaErrors(cudaDeviceSynchronize());
-    free_world<<<1,1>>>(elist, eworld, camera);
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaFree(camera));
     checkCudaErrors(cudaFree(eworld));
